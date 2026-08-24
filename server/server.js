@@ -10,8 +10,13 @@ const projectRoutes = require("./routes/projectRoutes");
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://client-one-psi-91.vercel.app"
+];
+
 app.use(cors({
-  origin: ["http://localhost:5173", "https://client-one-psi-91.vercel.app"]
+  origin: allowedOrigins
 }));
 
 app.use(express.json());
