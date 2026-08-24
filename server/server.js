@@ -20,6 +20,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
+//new
+app.use((req, res, next) => {
+  console.log("REQUEST:", req.method, req.originalUrl);
+  next();
+});
 
 // Routes
 app.use("/api/projects", projectRoutes);

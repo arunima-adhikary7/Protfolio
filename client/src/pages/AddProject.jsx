@@ -18,9 +18,16 @@ function AddProject() {
 
   const [loading, setLoading] = useState(false);
 
-  // ==========================================
+  // =========================================================
+  // BACKEND API URL
+  // =========================================================
+
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  // =========================================================
   // HANDLE NORMAL INPUTS
-  // ==========================================
+  // =========================================================
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -31,9 +38,9 @@ function AddProject() {
     }));
   };
 
-  // ==========================================
-  // HANDLE TECHNOLOGY
-  // ==========================================
+  // =========================================================
+  // HANDLE TECHNOLOGY CHANGE
+  // =========================================================
 
   const handleTechnologyChange = (index, value) => {
     setProject((prev) => {
@@ -48,9 +55,9 @@ function AddProject() {
     });
   };
 
-  // ==========================================
+  // =========================================================
   // ADD TECHNOLOGY
-  // ==========================================
+  // =========================================================
 
   const addTechnology = () => {
     setProject((prev) => ({
@@ -59,9 +66,9 @@ function AddProject() {
     }));
   };
 
-  // ==========================================
+  // =========================================================
   // REMOVE TECHNOLOGY
-  // ==========================================
+  // =========================================================
 
   const removeTechnology = (index) => {
     setProject((prev) => ({
@@ -72,27 +79,29 @@ function AddProject() {
     }));
   };
 
-  // ==========================================
+  // =========================================================
   // HANDLE IMAGE
-  // ==========================================
+  // =========================================================
 
   const handleImageChange = (e) => {
+    const file = e.target.files?.[0] || null;
+
     setProject((prev) => ({
       ...prev,
-      image: e.target.files[0],
+      image: file,
     }));
   };
 
-  // ==========================================
+  // =========================================================
   // SUBMIT PROJECT
-  // ==========================================
+  // =========================================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ------------------------------------------
+    // =======================================================
     // VALIDATION
-    // ------------------------------------------
+    // =======================================================
 
     if (!project.id) {
       alert("Please enter Project ID");
@@ -114,139 +123,163 @@ function AddProject() {
       return;
     }
 
-    try {
-      setLoading(true);
+    // =======================================================
+    // START LOADING
+    // =======================================================
 
-      // ------------------------------------------
+    setLoading(true);
+
+    try {
+      // =====================================================
       // CREATE FORMDATA
-      // ------------------------------------------
+      // =====================================================
 
       const formData = new FormData();
 
       formData.append("id", project.id);
+      formData.append("title", project.title.trim());
+      formData.append("category", project.category);
+      formData.append("description", project.description.trim());
 
-      formData.append(
-        "title",
-        project.title
-      );
-
-      formData.append(
-        "category",
-        project.category
-      );
-
-      formData.append(
-        "description",
-        project.description
-      );
-
-      // ------------------------------------------
+      // =====================================================
       // TECHNOLOGIES
-      // ------------------------------------------
+      // =====================================================
 
       project.technologies.forEach((technology) => {
         if (technology.trim() !== "") {
           formData.append(
             "technologies",
-            technology
+            technology.trim()
           );
         }
       });
 
-      // ------------------------------------------
+      // =====================================================
       // GITHUB
-      // ------------------------------------------
+      // =====================================================
 
-      formData.append(
-        "github",
-        project.github
-      );
+      formData.append("github", project.github.trim());
 
-      // ------------------------------------------
+      // =====================================================
       // LIVE
-      // ------------------------------------------
+      // =====================================================
 
-      formData.append(
-        "live",
-        project.live
-      );
+      formData.append("live", project.live.trim());
 
-      // ------------------------------------------
+      // =====================================================
       // FEATURED
-      // ------------------------------------------
+      // =====================================================
 
       formData.append(
         "featured",
-        project.featured
+        String(project.featured)
       );
 
-      // ------------------------------------------
+      // =====================================================
       // IMAGE
-      // ------------------------------------------
+      // =====================================================
 
       if (project.image) {
-        formData.append(
-          "image",
-          project.image
+        formData.append("image", project.image);
+      }
+
+      // =====================================================
+      // DEBUG
+      // =====================================================
+
+      console.log("--------------------------------");
+      console.log("SENDING PROJECT");
+      console.log("--------------------------------");
+
+      console.log("API URL:", API_URL);
+      console.log(
+        "REQUEST URL:",
+        `${API_URL}/api/projects`
+      );
+
+      for (const [key, value] of formData.entries()) {
+        console.log(
+          key,
+          value instanceof File
+            ? value.name
+            : value
         );
       }
 
-      // ------------------------------------------
-      // DEBUG
-      // ------------------------------------------
+      console.log("--------------------------------");
 
-      console.log("Sending project...");
-
-      for (const pair of formData.entries()) {
-        console.log(pair[0], pair[1]);
-      }
-
-      // ------------------------------------------
+      // =====================================================
       // SEND TO BACKEND
-      // ------------------------------------------
+      // =====================================================
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/projects`,
+        `${API_URL}/api/projects`,
         {
           method: "POST",
           body: formData,
         }
       );
 
-      const data = await response.json();
+      // =====================================================
+      // GET RESPONSE
+      // =====================================================
 
-      console.log("Backend response:", data);
+      const contentType =
+        response.headers.get("content-type");
 
-      // ------------------------------------------
-      // ERROR
-      // ------------------------------------------
+      let data;
+
+      if (
+        contentType &&
+        contentType.includes("application/json")
+      ) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+
+        data = {
+          message: text,
+        };
+      }
+
+      console.log("STATUS:", response.status);
+      console.log("BACKEND RESPONSE:", data);
+
+      // =====================================================
+      // BACKEND ERROR
+      // =====================================================
 
       if (!response.ok) {
         alert(
           data.message ||
-            "Failed to add project"
+            `Server error: ${response.status}`
         );
 
         return;
       }
 
-      // ------------------------------------------
+      // =====================================================
       // SUCCESS
-      // ------------------------------------------
+      // =====================================================
+
+      console.log("PROJECT SAVED SUCCESSFULLY");
 
       alert("Project added successfully!");
 
-      // Redirect to home
+      // =====================================================
+      // REDIRECT TO HOME
+      // =====================================================
+
       navigate("/");
 
     } catch (error) {
       console.error(
-        "Error adding project:",
+        "FRONTEND ERROR:",
         error
       );
 
       alert(
-        "Cannot connect to backend. Make sure server is running."
+        "Cannot connect to backend. Check that your backend server is running."
       );
 
     } finally {
@@ -254,14 +287,18 @@ function AddProject() {
     }
   };
 
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
     <div className="min-h-screen bg-[#F7F3EE] py-12 px-6">
 
       <div className="max-w-3xl mx-auto">
 
-        {/* =====================================
+        {/* =================================================
             HEADER
-        ====================================== */}
+        ================================================= */}
 
         <div className="mb-10">
 
@@ -279,19 +316,18 @@ function AddProject() {
 
         </div>
 
-
-        {/* =====================================
+        {/* =================================================
             FORM
-        ====================================== */}
+        ================================================= */}
 
         <form
           onSubmit={handleSubmit}
           className="bg-white rounded-3xl border border-[#E3D6CC] shadow-sm p-8 space-y-7"
         >
 
-          {/* =================================
+          {/* =================================================
               PROJECT ID
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -305,15 +341,15 @@ function AddProject() {
               value={project.id}
               onChange={handleChange}
               placeholder="1"
+              min="1"
               className="w-full px-4 py-3 rounded-xl border border-[#D8C5B8] outline-none focus:border-[#6B3030] focus:ring-2 focus:ring-[#6B3030]/10"
             />
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               TITLE
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -332,10 +368,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               CATEGORY
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -378,10 +413,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               DESCRIPTION
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -400,10 +434,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               TECHNOLOGIES
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -434,8 +467,7 @@ function AddProject() {
                       className="flex-1 px-4 py-3 rounded-xl border border-[#D8C5B8] outline-none focus:border-[#6B3030]"
                     />
 
-                    {project.technologies.length >
-                      1 && (
+                    {project.technologies.length > 1 && (
 
                       <button
                         type="button"
@@ -456,7 +488,6 @@ function AddProject() {
 
             </div>
 
-
             <button
               type="button"
               onClick={addTechnology}
@@ -467,10 +498,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               IMAGE
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -493,10 +523,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               GITHUB
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -515,10 +544,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               LIVE
-          ================================== */}
+          ================================================= */}
 
           <div>
 
@@ -537,10 +565,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               FEATURED
-          ================================== */}
+          ================================================= */}
 
           <div className="flex items-center gap-3">
 
@@ -558,10 +585,9 @@ function AddProject() {
 
           </div>
 
-
-          {/* =================================
+          {/* =================================================
               SUBMIT
-          ================================== */}
+          ================================================= */}
 
           <button
             type="submit"
